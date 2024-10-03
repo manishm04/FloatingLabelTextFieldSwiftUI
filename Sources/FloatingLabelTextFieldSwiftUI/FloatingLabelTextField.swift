@@ -74,6 +74,9 @@ public struct FloatingLabelTextField: View {
                 SecureField("", text: $textFieldValue.animation()) {
                 }
                 .onTapGesture {
+                    withAnimation {
+						self.isSelected = true
+					}
                     self.isShowError = self.notifier.isRequiredField
                     self.validtionChecker = self.currentError.condition
                     self.editingChanged(self.isSelected)
@@ -176,17 +179,30 @@ public struct FloatingLabelTextField: View {
 
     // MARK: Top error and title lable view
     var topTitleLable: some View {
-        Text((self.currentError.condition || !notifier.isShowError) ? placeholderText : self.currentError.errorMessage)
-            .frame(alignment: notifier.textAlignment.getAlignment())
-            .animation(.default)
-            .foregroundColor((self.currentError.condition || !notifier.isShowError) ? (self.isSelected ? notifier.selectedTitleColor : notifier.titleColor) : notifier.errorColor)
-            .font(notifier.titleFont)
+        withAnimation(.easeIn) {
+            Text((self.currentError.condition || !notifier.isShowError) ? placeholderText : self.currentError.errorMessage)
+                .frame(alignment: notifier.textAlignment.getAlignment())
+                .animation(.default)
+                .foregroundColor((self.currentError.condition || !notifier.isShowError) ? (self.isSelected ? notifier.selectedTitleColor : notifier.titleColor) : notifier.errorColor)
+                .font(notifier.titleFont)
+        }
     }
 
     // MARK: Bottom Line View
     var bottomLine: some View {
-        Divider()
-            .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+        if notifier.isRequiredField && textFieldValue.isEmpty {
+            Divider()
+                .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+                .background(Color.red)
+        } else if textFieldValue.isEmpty || !notifier.isShowError {
+            Divider()
+                .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+                .background((self.isSelected ? notifier.selectedLineColor : notifier.lineColor))
+        } else {
+            Divider()
+                .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+                .background((self.currentError.condition) ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
+        }
     }
 
     //MARK: Body View
@@ -206,7 +222,7 @@ public struct FloatingLabelTextField: View {
 
                 HStack {
                     // Left View
-                    notifier.leftView
+                    notifier.leftView.padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 10 : 3)
 
                     // Center View
                     centerTextFieldView
