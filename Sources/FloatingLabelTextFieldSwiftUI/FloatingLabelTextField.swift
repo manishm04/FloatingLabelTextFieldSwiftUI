@@ -105,8 +105,8 @@ public struct FloatingLabelTextField: View {
         if !self.isSelected {
             UIResponder.currentFirstResponder?.resignFirstResponder()
         }
-    }
-    .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
+//    }
+//    .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         if let currentResponder = UIResponder.currentFirstResponder, let currentTextField = currentResponder.globalView as? UITextField{
                             arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
@@ -153,7 +153,7 @@ public struct FloatingLabelTextField: View {
    //  			}
    //  			self.editingChanged(isChanged)
    //  			arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
-		}
+//		}
                         // .onChange(of: isFocused, perform: { (isChanged) in
                         //     withAnimation {
                         //         DispatchQueue.main.async {
