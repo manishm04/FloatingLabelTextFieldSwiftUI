@@ -11,517 +11,447 @@ import SwiftUI
 //MARK: FloatingLabelTextField Style Protocol
 @available(iOS 15.0, *)
 public protocol FloatingLabelTextFieldStyle {
-    func body(content: FloatingLabelTextField) -> FloatingLabelTextField
+	func body(content: FloatingLabelTextField) -> FloatingLabelTextField
 }
 
 //MARK: FloatingLabelTextField View
 @available(iOS 15.0, *)
 public struct FloatingLabelTextField: View {
-
-    //MARK: Binding Property
-    @Binding private var textFieldValue: String
-    @State var isSelected: Bool = false
-    @Binding private var validtionChecker: Bool
-
-    private var currentError: TextFieldValidator {
-        if notifier.isRequiredField && isShowError && textFieldValue.isEmpty {
-            return TextFieldValidator(condition: false, errorMessage: notifier.requiredFieldMessage)
-        }
-
-        if let firstError = notifier.arrValidator.filter({!$0.condition}).first {
-            return firstError
-        }
-        return TextFieldValidator(condition: true, errorMessage: "")
-    }
-
-    @State var isShowError: Bool = false
-
-    @FocusState fileprivate var isFocused: Bool
-    @State private var textFieldHeight: CGFloat = 0.0
-
-    //MARK: Observed Object
-    @ObservedObject private var notifier = FloatingLabelTextFieldNotifier()
-
-    //MARK: Properties
-    private let axis: Axis
-    private var placeholderText: String = ""
-    private var editingChanged: (Bool) -> () = { _ in }
-    private var commit: () -> () = { }
-
-    private func backgroundErrorChecker() -> TextFieldValidator {
-	    if notifier.isRequiredField && isShowError && textFieldValue.isEmpty {
-	        return TextFieldValidator(condition: false, errorMessage: notifier.requiredFieldMessage)
-	    }
-	    
-	    if let firstError = notifier.arrValidator.filter({!$0.condition}).first {
-	        return firstError
-	    }
-	    return TextFieldValidator(condition: true, errorMessage: "")
+	
+	//MARK: Binding Property
+	@Binding private var textFieldValue: String
+	@State var isSelected: Bool = false
+	@Binding private var validtionChecker: Bool
+	
+	private var currentError: TextFieldValidator {
+		if notifier.isRequiredField && isShowError && textFieldValue.isEmpty {
+			return TextFieldValidator(condition: false, errorMessage: notifier.requiredFieldMessage)
+		}
+		
+		if let firstError = notifier.arrValidator.filter({!$0.condition}).first {
+			return firstError
+		}
+		return TextFieldValidator(condition: true, errorMessage: "")
 	}
-
-    //MARK: Init
-    public init(_ text: Binding<String>, validtionChecker: Binding<Bool>? = nil, placeholder: String = "",
-                axis: Axis = .horizontal, editingChanged: @escaping (Bool)->() = { _ in }, commit: @escaping ()->() = { }) {
-        self._textFieldValue = text
-        self.placeholderText = placeholder
-        self.axis = axis
-        self.editingChanged = editingChanged
-        self.commit = commit
-        self._validtionChecker = validtionChecker ?? Binding.constant(false)
-    }
-
-    // MARK: Center View
-    var centerTextFieldView: some View {
-        ZStack(alignment: notifier.textAlignment.getAlignment()) {
-
-            if (notifier.isAnimateOnFocus ? (!isSelected && textFieldValue.isEmpty) : textFieldValue.isEmpty) {
-                Text(placeholderText)
-                    .font(notifier.placeholderFont)
-                    .multilineTextAlignment(notifier.textAlignment)
-                    .foregroundStyle(notifier.placeholderColor)
-            }
-
-            if notifier.isSecureTextEntry {
-     //            SecureField("", text: $textFieldValue.animation()) {
-     //            }
-     //            .onTapGesture {
-     //                withAnimation {
-					// 	self.isSelected = true
-					// }
-     //                self.isShowError = self.notifier.isRequiredField
-     //                self.validtionChecker = self.currentError.condition
-     //                self.editingChanged(self.isSelected)
-     //                if !self.isSelected {
-     //                    UIResponder.currentFirstResponder?.resignFirstResponder()
-     //                }
-		    SecureField("", text: $textFieldValue.animation())
-    .onTapGesture {
-        withAnimation {
-            self.isSelected = true
-        }
-        self.isShowError = self.notifier.isRequiredField
-        self.validtionChecker = self.currentError.condition
-        self.editingChanged(self.isSelected)
-        if !self.isSelected {
-            UIResponder.currentFirstResponder?.resignFirstResponder()
-        }
-//    }
-//    .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        if let currentResponder = UIResponder.currentFirstResponder, let currentTextField = currentResponder.globalView as? UITextField{
-                            arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
-                            withAnimation {
-                                self.isSelected = self.notifier.isSecureTextEntry
-                            }
-                            currentTextField.addAction(for: .editingDidEnd) {
-                                self.isSelected = false
-                                self.isShowError = self.notifier.isRequiredField
-                                self.validtionChecker = self.currentError.condition
-                                self.commit()
-                                arrTextFieldEditActions = []
-                            }
-                        }
-                    }
-                }
-                .disabled(self.notifier.disabled)
-                .allowsHitTesting(self.notifier.allowsHitTesting)
-                .font(notifier.font)
-                .multilineTextAlignment(notifier.textAlignment)
-                .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
-
-            } else {
-                if #available(iOS 16.0, *) {
-			TextField("", text: $textFieldValue.animation(), axis: axis)
-			    .focused($isFocused)
-			    .onChange(of: isFocused) { isChanged in
-			        withAnimation {
-			            self.isSelected = isChanged
-			        }
-			        self.isShowError = self.notifier.isRequiredField
-			        self.validtionChecker = self.currentError.condition
-			    }
-			    .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
-   //                  TextField("", text: $textFieldValue.animation(), axis: axis)
-   //                      .focused($isFocused)
-			// .onChange(of: isFocused) { isChanged in
-   // 				withAnimation {
-   //      				self.isSelected = isChanged
-   //  				}
-   //  			if !isChanged {
-   //      			self.isShowError = self.notifier.isRequiredField
-   //      			self.validtionChecker = self.currentError.condition
-   //  			}
-   //  			self.editingChanged(isChanged)
-   //  			arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
-//		}
-                        // .onChange(of: isFocused, perform: { (isChanged) in
-                        //     withAnimation {
-                        //         DispatchQueue.main.async {
-                        //             self.isSelected = isChanged
-                        //         }
-                        //     }
-
-                        //     DispatchQueue.main.async {
-                        //         self.isShowError = self.notifier.isRequiredField
-                        //     }
-
-                        //     self.validtionChecker = self.currentError.condition
-                        //     self.editingChanged(isChanged)
-                        //     arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
-                        // })
-                        .onSubmit({
-                            self.isShowError = self.notifier.isRequiredField
-                            self.validtionChecker = self.currentError.condition
-                            self.commit()
-                            arrTextFieldEditActions = []
-                        })
-                        .lineLimit(notifier.lineLimit)
-                        .disabled(self.notifier.disabled)
-                        .allowsHitTesting(self.notifier.allowsHitTesting)
-                        .multilineTextAlignment(notifier.textAlignment)
-                        .font(notifier.font)
-                        .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
-                        .background(
-                            GeometryReader(content: set(geometry:))
-                        )
-                } else {
-                    TextField("", text: $textFieldValue.animation(), onEditingChanged: { (isChanged) in
-                        withAnimation {
-                            DispatchQueue.main.async {
-                                self.isSelected = isChanged
-                            }
-                        }
-
-                        DispatchQueue.main.async {
-                            self.isShowError = self.notifier.isRequiredField
-                        }
-
-                        self.validtionChecker = self.currentError.condition
-                        self.editingChanged(isChanged)
-                        arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
-                    }, onCommit: {
-                        self.isShowError = self.notifier.isRequiredField
-                        self.validtionChecker = self.currentError.condition
-                        self.commit()
-                        arrTextFieldEditActions = []
-                    })
-                    .disabled(self.notifier.disabled)
-                    .allowsHitTesting(self.notifier.allowsHitTesting)
-                    .multilineTextAlignment(notifier.textAlignment)
-                    .font(notifier.font)
-                    .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
-                }
-            }
-        }
-    }
-
-    private func set(geometry: GeometryProxy) -> some View {
-        DispatchQueue.main.async {
-            self.textFieldHeight = geometry.size.height
-        }
-        return Color.clear
-    }
-
-    // MARK: Top error and title lable view
-    var topTitleLable: some View {
-        withAnimation(.easeIn) {
-            Text((self.currentError.condition || !notifier.isShowError) ? placeholderText : self.currentError.errorMessage)
-                .frame(alignment: notifier.textAlignment.getAlignment())
-                .animation(.default)
-                .foregroundStyle((self.currentError.condition || !notifier.isShowError) ? (self.isSelected ? notifier.selectedTitleColor : notifier.titleColor) : notifier.errorColor)
-                .font(notifier.titleFont)
-        }
-    }
-
-    // MARK: Bottom Line View
-    // var bottomLine: some View {
-    //     if notifier.isRequiredField && textFieldValue.isEmpty {
-    //         Divider()
-    //             .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
-    //             .background(Color.red)
-    //     } else if textFieldValue.isEmpty || !notifier.isShowError {
-    //         Divider()
-    //             .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
-    //             .background((self.isSelected ? notifier.selectedLineColor : notifier.lineColor))
-    //     } else {
-    //         Divider()
-    //             .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
-    //             .background((self.currentError.condition) ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
-    //     }
-    // }
-	var bottomLine: some View {
-    if textFieldValue.isEmpty || !notifier.isShowError {
-        Rectangle()
-            .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight)
-            .foregroundStyle(self.isSelected ? notifier.selectedLineColor : notifier.lineColor)
-    } else {
-        Rectangle()
-            .frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight)
-            .foregroundStyle(self.currentError.condition ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
-    }
-}
-
-    //MARK: Body View
-    public var body: some View {
-        VStack () {
-            ZStack(alignment: .bottomLeading) {
-
-                //Top error and title lable view
-                if notifier.isShowError && self.isShowError && textFieldValue.isEmpty || (notifier.isAnimateOnFocus && isSelected){
-                    self.topTitleLable.padding(.bottom, CGFloat(notifier.spaceBetweenTitleText)).opacity(1)
-
-                } else {
-                    let padding = notifier.spaceBetweenTitleText + (axis == .vertical ? textFieldHeight : 0)
-                    self.topTitleLable.padding(.bottom, !textFieldValue.isEmpty ? padding : 0)
-                    .opacity((textFieldValue.isEmpty) ? 0 : 1)
-                }
-
-                HStack {
-                    // Left View
-                    notifier.leftView.padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 10 : 3)
-
-                    // Center View
-                    centerTextFieldView
-
-                    //Right View
-                    notifier.rightView
-                }
-            }
-
-            //MARK: Line View
-            if textFieldValue.isEmpty || !notifier.isShowError {
-                bottomLine
-                    .background((self.isSelected ? notifier.selectedLineColor : notifier.lineColor))
-
-            } else {
-                bottomLine
-                    .background((self.currentError.condition) ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
-            }
-
-        }
-        .frame(alignment: .bottomLeading)
-	.onChange(of: textFieldValue) { value in
-   		DispatchQueue.global().async {
-        		let validationResult = self.currentError.condition
-        		DispatchQueue.main.async {
-            			self.validtionChecker = validationResult
-        		}
+	
+	@State var isShowError: Bool = false
+	
+	@FocusState fileprivate var isFocused: Bool
+	@State private var textFieldHeight: CGFloat = 0.0
+	
+	//MARK: Observed Object
+	@ObservedObject private var notifier = FloatingLabelTextFieldNotifier()
+	
+	//MARK: Properties
+	private let axis: Axis
+	private var placeholderText: String = ""
+	private var editingChanged: (Bool) -> () = { _ in }
+	private var commit: () -> () = { }
+	
+	//MARK: Init
+	public init(_ text: Binding<String>, validtionChecker: Binding<Bool>? = nil, placeholder: String = "",
+				axis: Axis = .horizontal, editingChanged: @escaping (Bool)->() = { _ in }, commit: @escaping ()->() = { }) {
+		self._textFieldValue = text
+		self.placeholderText = placeholder
+		self.axis = axis
+		self.editingChanged = editingChanged
+		self.commit = commit
+		self._validtionChecker = validtionChecker ?? Binding.constant(false)
+	}
+	
+	// MARK: Center View
+	var centerTextFieldView: some View {
+		ZStack(alignment: notifier.textAlignment.getAlignment()) {
+			
+			if (notifier.isAnimateOnFocus ? (!isSelected && textFieldValue.isEmpty) : textFieldValue.isEmpty) {
+				Text(placeholderText)
+					.font(notifier.placeholderFont)
+					.multilineTextAlignment(notifier.textAlignment)
+					.foregroundColor(notifier.placeholderColor)
+			}
+			
+			if notifier.isSecureTextEntry {
+				SecureField("", text: $textFieldValue.animation()) {
+				}
+				.onTapGesture {
+					withAnimation {
+						self.isSelected = true
+					}
+					self.isShowError = self.notifier.isRequiredField
+					self.validtionChecker = self.currentError.condition
+					self.editingChanged(self.isSelected)
+					if !self.isSelected {
+						UIResponder.currentFirstResponder?.resignFirstResponder()
+					}
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+						if let currentResponder = UIResponder.currentFirstResponder, let currentTextField = currentResponder.globalView as? UITextField{
+							arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
+							withAnimation {
+								self.isSelected = self.notifier.isSecureTextEntry
+							}
+							currentTextField.addAction(for: .editingDidEnd) {
+								self.isSelected = false
+								self.isShowError = self.notifier.isRequiredField
+								self.validtionChecker = self.currentError.condition
+								self.commit()
+								arrTextFieldEditActions = []
+							}
+						}
+					}
+				}
+				.disabled(self.notifier.disabled)
+				.allowsHitTesting(self.notifier.allowsHitTesting)
+				.font(notifier.font)
+				.multilineTextAlignment(notifier.textAlignment)
+				.foregroundColor((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
+				
+			} else {
+				if #available(iOS 16.0, *) {
+					TextField("", text: $textFieldValue.animation(), axis: axis)
+						.focused($isFocused)
+						.onChange(of: isFocused, perform: { (isChanged) in
+							withAnimation {
+								DispatchQueue.main.async {
+									self.isSelected = isChanged
+								}
+							}
+							
+							DispatchQueue.main.async {
+								self.isShowError = self.notifier.isRequiredField
+							}
+							
+							self.validtionChecker = self.currentError.condition
+							self.editingChanged(isChanged)
+							arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
+						})
+						.onSubmit({
+							self.isShowError = self.notifier.isRequiredField
+							self.validtionChecker = self.currentError.condition
+							self.commit()
+							arrTextFieldEditActions = []
+						})
+						.lineLimit(notifier.lineLimit)
+						.disabled(self.notifier.disabled)
+						.allowsHitTesting(self.notifier.allowsHitTesting)
+						.multilineTextAlignment(notifier.textAlignment)
+						.font(notifier.font)
+						.foregroundColor((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
+						.background(
+							GeometryReader(content: set(geometry:))
+						)
+				} else {
+					TextField("", text: $textFieldValue.animation(), onEditingChanged: { (isChanged) in
+						withAnimation {
+							DispatchQueue.main.async {
+								self.isSelected = isChanged
+							}
+						}
+						
+						DispatchQueue.main.async {
+							self.isShowError = self.notifier.isRequiredField
+						}
+						
+						self.validtionChecker = self.currentError.condition
+						self.editingChanged(isChanged)
+						arrTextFieldEditActions = self.notifier.arrTextFieldEditActions
+					}, onCommit: {
+						self.isShowError = self.notifier.isRequiredField
+						self.validtionChecker = self.currentError.condition
+						self.commit()
+						arrTextFieldEditActions = []
+					})
+					.disabled(self.notifier.disabled)
+					.allowsHitTesting(self.notifier.allowsHitTesting)
+					.multilineTextAlignment(notifier.textAlignment)
+					.font(notifier.font)
+					.foregroundColor((self.currentError.condition || !notifier.isShowError) ? (isSelected ? notifier.selectedTextColor : notifier.textColor) : notifier.errorColor)
+				}
+			}
 		}
 	}
-	.onChange(of: validtionChecker) { isChanged in
-    		DispatchQueue.main.async {
-        		self.isShowError = self.notifier.isRequiredField
-    		}
+	
+	private func set(geometry: GeometryProxy) -> some View {
+		DispatchQueue.main.async {
+			self.textFieldHeight = geometry.size.height
+		}
+		return Color.clear
 	}
-    }
+	
+	// MARK: Top error and title lable view
+	var topTitleLable: some View {
+		withAnimation(.easeIn) {
+			Text((self.currentError.condition || !notifier.isShowError) ? placeholderText : self.currentError.errorMessage)
+				.frame(alignment: notifier.textAlignment.getAlignment())
+				.animation(.default)
+				.foregroundColor((self.currentError.condition || !notifier.isShowError) ? (self.isSelected ? notifier.selectedTitleColor : notifier.titleColor) : notifier.errorColor)
+				.font(notifier.titleFont)
+		}
+	}
+	
+	// MARK: Bottom Line View
+	var bottomLine: some View {
+		if notifier.isRequiredField && textFieldValue.isEmpty {
+			Divider()
+				.frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+				.background(Color.red)
+		} else if textFieldValue.isEmpty || !notifier.isShowError {
+			Divider()
+				.frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+				.background((self.isSelected ? notifier.selectedLineColor : notifier.lineColor))
+		} else {
+			Divider()
+				.frame(height: self.isSelected ? notifier.selectedLineHeight : notifier.lineHeight, alignment: .leading)
+				.background((self.currentError.condition) ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
+		}
+	}
+	
+	//MARK: Body View
+	public var body: some View {
+		VStack () {
+			ZStack(alignment: .bottomLeading) {
+				
+				//Top error and title lable view
+				if notifier.isShowError && self.isShowError && textFieldValue.isEmpty || (notifier.isAnimateOnFocus && isSelected){
+					self.topTitleLable.padding(.bottom, CGFloat(notifier.spaceBetweenTitleText)).opacity(1)
+					
+				} else {
+					let padding = notifier.spaceBetweenTitleText + (axis == .vertical ? textFieldHeight : 0)
+					self.topTitleLable.padding(.bottom, !textFieldValue.isEmpty ? padding : 0)
+						.opacity((textFieldValue.isEmpty) ? 0 : 1)
+				}
+				
+				HStack {
+					// Left View
+					notifier.leftView.padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 10 : 3)
+					
+					// Center View
+					centerTextFieldView
+					
+					//Right View
+					notifier.rightView
+				}
+			}
+			
+			//MARK: Line View
+			if textFieldValue.isEmpty || !notifier.isShowError {
+				bottomLine
+					.background((self.isSelected ? notifier.selectedLineColor : notifier.lineColor))
+				
+			} else {
+				bottomLine
+					.background((self.currentError.condition) ? (self.isSelected ? notifier.selectedLineColor : notifier.lineColor) : notifier.errorColor)
+			}
+			
+		}
+		.frame(alignment: .bottomLeading)
+	}
 }
 
 //MARK: FloatingLabelTextField Style Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    public func floatingStyle<S>(_ style: S) -> some View where S: FloatingLabelTextFieldStyle {
-        return style.body(content: self)
-    }
+	public func floatingStyle<S>(_ style: S) -> some View where S: FloatingLabelTextFieldStyle {
+		return style.body(content: self)
+	}
 }
 
 //MARK: View Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the left view.
-    public func leftView<LRView: View>(@ViewBuilder _ view: @escaping () -> LRView) -> Self {
-        notifier.leftView = AnyView(view())
-        return self
-    }
-
-    /// Sets the right view.
-    public func rightView<LRView: View>(@ViewBuilder _ view: @escaping () -> LRView) -> Self {
-        notifier.rightView = AnyView(view())
-        return self
-    }
+	/// Sets the left view.
+	public func leftView<LRView: View>(@ViewBuilder _ view: @escaping () -> LRView) -> Self {
+		notifier.leftView = AnyView(view())
+		return self
+	}
+	
+	/// Sets the right view.
+	public func rightView<LRView: View>(@ViewBuilder _ view: @escaping () -> LRView) -> Self {
+		notifier.rightView = AnyView(view())
+		return self
+	}
 }
 
 //MARK: Text Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the alignment for text.
-    public func textAlignment(_ alignment: TextAlignment) -> Self {
-        notifier.textAlignment = alignment
-        return self
-    }
-
-    /// Sets the secure text entry for TextField.
-    public func isSecureTextEntry(_ isSecure: Bool) -> Self {
-        notifier.isSecureTextEntry = isSecure
-        return self
-    }
-
-    /// Whether users can interact with this.
-    public func disabled(_ isDisabled: Bool) -> Self {
-        notifier.disabled = isDisabled
-        return self
-    }
-
-    /// Whether this view participates in hit test operations.
-    public func allowsHitTesting(_ isAllowsHitTesting: Bool) -> Self {
-        notifier.allowsHitTesting = isAllowsHitTesting
-        return self
-    }
+	/// Sets the alignment for text.
+	public func textAlignment(_ alignment: TextAlignment) -> Self {
+		notifier.textAlignment = alignment
+		return self
+	}
+	
+	/// Sets the secure text entry for TextField.
+	public func isSecureTextEntry(_ isSecure: Bool) -> Self {
+		notifier.isSecureTextEntry = isSecure
+		return self
+	}
+	
+	/// Whether users can interact with this.
+	public func disabled(_ isDisabled: Bool) -> Self {
+		notifier.disabled = isDisabled
+		return self
+	}
+	
+	/// Whether this view participates in hit test operations.
+	public func allowsHitTesting(_ isAllowsHitTesting: Bool) -> Self {
+		notifier.allowsHitTesting = isAllowsHitTesting
+		return self
+	}
 }
 
 @available(iOS 16.0, *)
 extension FloatingLabelTextField {
-    public func lineLimit(_ limit: Int) -> Self {
-        notifier.lineLimit = limit
-        return self
-    }
+	public func lineLimit(_ limit: Int) -> Self {
+		notifier.lineLimit = limit
+		return self
+	}
 }
 
 //MARK: Line Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the line height.
-    public func lineHeight(_ height: CGFloat) -> Self {
-        notifier.lineHeight = height
-        return self
-    }
-
-    /// Sets the selected line height.
-    public func selectedLineHeight(_ height: CGFloat) -> Self {
-        notifier.selectedLineHeight = height
-        return self
-    }
-
-    /// Sets the line color.
-    public func lineColor(_ color: Color) -> Self {
-        notifier.lineColor = color
-        return self
-    }
-
-    /// Sets the selected line color.
-    public func selectedLineColor(_ color: Color) -> Self {
-        notifier.selectedLineColor = color
-        return self
-    }
+	/// Sets the line height.
+	public func lineHeight(_ height: CGFloat) -> Self {
+		notifier.lineHeight = height
+		return self
+	}
+	
+	/// Sets the selected line height.
+	public func selectedLineHeight(_ height: CGFloat) -> Self {
+		notifier.selectedLineHeight = height
+		return self
+	}
+	
+	/// Sets the line color.
+	public func lineColor(_ color: Color) -> Self {
+		notifier.lineColor = color
+		return self
+	}
+	
+	/// Sets the selected line color.
+	public func selectedLineColor(_ color: Color) -> Self {
+		notifier.selectedLineColor = color
+		return self
+	}
 }
 
 //MARK: Title Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the title color.
-    public func titleColor(_ color: Color) -> Self {
-        notifier.titleColor = color
-        return self
-    }
-
-    /// Sets the selected title color.
-    public func selectedTitleColor(_ color: Color) -> Self {
-        notifier.selectedTitleColor = color
-        return self
-    }
-
-    /// Sets the title font.
-    public func titleFont(_ font: Font) -> Self {
-        notifier.titleFont = font
-        return self
-    }
-
-    /// Sets the space between title and text.
-    public func spaceBetweenTitleText(_ space: Double) -> Self {
-        notifier.spaceBetweenTitleText = space
-        return self
-    }
+	/// Sets the title color.
+	public func titleColor(_ color: Color) -> Self {
+		notifier.titleColor = color
+		return self
+	}
+	
+	/// Sets the selected title color.
+	public func selectedTitleColor(_ color: Color) -> Self {
+		notifier.selectedTitleColor = color
+		return self
+	}
+	
+	/// Sets the title font.
+	public func titleFont(_ font: Font) -> Self {
+		notifier.titleFont = font
+		return self
+	}
+	
+	/// Sets the space between title and text.
+	public func spaceBetweenTitleText(_ space: Double) -> Self {
+		notifier.spaceBetweenTitleText = space
+		return self
+	}
 }
 
 //MARK: Text Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the text color.
-    public func textColor(_ color: Color) -> Self {
-        notifier.textColor = color
-        return self
-    }
-
-    /// Sets the selected text color.
-    public func selectedTextColor(_ color: Color) -> Self {
-        notifier.selectedTextColor = color
-        return self
-    }
-
-    /// Sets the text font.
-    public func textFont(_ font: Font) -> Self {
-        notifier.font = font
-        return self
-    }
+	/// Sets the text color.
+	public func textColor(_ color: Color) -> Self {
+		notifier.textColor = color
+		return self
+	}
+	
+	/// Sets the selected text color.
+	public func selectedTextColor(_ color: Color) -> Self {
+		notifier.selectedTextColor = color
+		return self
+	}
+	
+	/// Sets the text font.
+	public func textFont(_ font: Font) -> Self {
+		notifier.font = font
+		return self
+	}
 }
 
 //MARK: Placeholder Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the placeholder color.
-    public func placeholderColor(_ color: Color) -> Self {
-        notifier.placeholderColor = color
-        return self
-    }
-
-    /// Sets the placeholder font.
-    public func placeholderFont(_ font: Font) -> Self {
-        notifier.placeholderFont = font
-        return self
-    }
+	/// Sets the placeholder color.
+	public func placeholderColor(_ color: Color) -> Self {
+		notifier.placeholderColor = color
+		return self
+	}
+	
+	/// Sets the placeholder font.
+	public func placeholderFont(_ font: Font) -> Self {
+		notifier.placeholderFont = font
+		return self
+	}
 }
 
 //MARK: Error Property Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Sets the is show error message.
-    public func isShowError(_ show: Bool) -> Self {
-        notifier.isShowError = show
-        return self
-    }
-
-    /// Sets the validation conditions.
-    public func addValidations(_ conditions: [TextFieldValidator]) -> Self {
-        notifier.arrValidator.append(contentsOf: conditions)
-        return self
-    }
-
-    /// Sets the validation condition.
-    public func addValidation(_ condition: TextFieldValidator) -> Self {
-        notifier.arrValidator.append(condition)
-        return self
-    }
-
-    /// Sets the error color.
-    public func errorColor(_ color: Color) -> Self {
-        notifier.errorColor = color
-        return self
-    }
-
-    /// Sets the field is required or not with message.
-    public func isRequiredField(_ required: Bool, with message: String) -> Self {
-        notifier.isRequiredField = required
-        notifier.requiredFieldMessage = message
-        return self
-    }
+	/// Sets the is show error message.
+	public func isShowError(_ show: Bool) -> Self {
+		notifier.isShowError = show
+		return self
+	}
+	
+	/// Sets the validation conditions.
+	public func addValidations(_ conditions: [TextFieldValidator]) -> Self {
+		notifier.arrValidator.append(contentsOf: conditions)
+		return self
+	}
+	
+	/// Sets the validation condition.
+	public func addValidation(_ condition: TextFieldValidator) -> Self {
+		notifier.arrValidator.append(condition)
+		return self
+	}
+	
+	/// Sets the error color.
+	public func errorColor(_ color: Color) -> Self {
+		notifier.errorColor = color
+		return self
+	}
+	
+	/// Sets the field is required or not with message.
+	public func isRequiredField(_ required: Bool, with message: String) -> Self {
+		notifier.isRequiredField = required
+		notifier.requiredFieldMessage = message
+		return self
+	}
 }
 
 //MARK: Text Field Editing Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Disable text field editing action. Like cut, copy, past, all etc.
-    public func addDisableEditingAction(_ actions: [TextFieldEditActions]) -> Self {
-        notifier.arrTextFieldEditActions = actions
-        return self
-    }
+	/// Disable text field editing action. Like cut, copy, past, all etc.
+	public func addDisableEditingAction(_ actions: [TextFieldEditActions]) -> Self {
+		notifier.arrTextFieldEditActions = actions
+		return self
+	}
 }
 
 //MARK: Animation Style Funcation
 @available(iOS 15.0, *)
 extension FloatingLabelTextField {
-    /// Enable the placeholder label when the textfield is focused.
-    public func enablePlaceholderOnFocus(_ isEanble: Bool) -> Self {
-        notifier.isAnimateOnFocus = isEanble
-        return self
-    }
+	/// Enable the placeholder label when the textfield is focused.
+	public func enablePlaceholderOnFocus(_ isEanble: Bool) -> Self {
+		notifier.isAnimateOnFocus = isEanble
+		return self
+	}
 }
-
