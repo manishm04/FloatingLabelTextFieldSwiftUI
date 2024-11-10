@@ -44,7 +44,7 @@ class FloatingLabelTextFieldNotifier: ObservableObject {
     @Published var placeholderFont: Font = .system(size: isIpad ? 22 : isIphone ? 16 : 15)
     
     //MARK: Other Properties
-    @Published var spaceBetweenTitleText: Double = isIpad ? 30 : 20
+    @Published var spaceBetweenTitleText: Double = 30
     @Published var isSecureTextEntry: Bool = false
     @Published var disabled: Bool = false
     @Published var allowsHitTesting: Bool = true
